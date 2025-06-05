@@ -77,7 +77,8 @@
 		}
 
 		#summary,
-		#multiSummary {
+		#multiSummary,
+		#sweepSummary {
 			margin-top: 20px;
 		}
 
@@ -161,6 +162,7 @@
 
 <body>
 	<h1>Can you pass the challenge?</h1>
+	<p style="color: #cccccc;">Adjust the parameters below and see your results—every run is a randomized trading simulation.</p>
 	<div class="input-group">
 		<label for="monthlyGoal">Profit Goal:</label>
 		<input type="number" id="monthlyGoal" value="3000" />
@@ -176,7 +178,7 @@
 	<div class="input-group">
 		<label for="chanceTrade">Chance of Trading/Day:</label>
 		<input type="number" id="chanceTrade" value="60" step="0.1" /> %
-		(3/5 days is 60%, 4/5 is 80% etc)
+		(3 out of 5 days is 60%, 4 out of 5 is 80%, etc.)
 	</div>
 	<hr>
 	<div class="input-group">
@@ -188,8 +190,11 @@
 		$ <input type="number" id="risk" value="500" />
 	</div>
 	<div class="input-group">
-		<label for="rrMin">Risk:Reward Range:</label>
-		<input type="number" id="rrMin" value="1.5" step="0.1" /> ..
+		<label for="rrMin">Risk:Reward Range (Min):</label>
+		<input type="number" id="rrMin" value="1.5" step="0.1" />
+	</div>
+	<div class="input-group">
+		<label for="rrMax">Risk:Reward Range (Max):</label>
 		<input type="number" id="rrMax" value="2.0" step="0.1" />
 	</div>
 	<div class="input-group">
@@ -202,20 +207,20 @@
 		<div>
 			<h3>Single pass</h3>
 			<div class="input-group">
-				<label for="speedRange">Single Simulation Speed:</label>
+				<label for="speedRange">How fast should it run?</label>
 				<input type="range" id="speedRange" min="1" max="61" step="1" value="10" />
 				<span id="speedLabel"></span>
 			</div>
-			<button id="runSim">Run Simulation</button>
+			<button id="runSim">Run Single Simulation</button>
 		</div>
 		<div>
-			<h3>Multi pass simulation</h3>
+			<h3>Multi pass</h3>
 			<div class="input-group">
-				<label for="numRuns">Number of Simulations:</label>
+				<label for="numRuns">How many times?</label>
 				<input type="number" id="numRuns" value="100" />
 			</div>
 			<div class="input-group">
-				<label for="multiSpeedRange">Multi Simulation Speed:</label>
+				<label for="multiSpeedRange">Speed for Multiple Runs:</label>
 				<input type="range" id="multiSpeedRange" min="1" max="121" step="1" value="25" />
 				<span id="multiSpeedLabel"></span>
 			</div>
@@ -235,23 +240,22 @@
 	</div>
 	<hr>
 	<div class="input-group">
-		<h3>Success optimizer</h3>
-		<p>
-			Run the simulation multiple times, plotting the success rate for multiple values of a single variable.
-			All other variables are kept unchanged, so you can see how each variable affects your overall probability
-			and so you can find the sweet spot of one parameter e.g.: Risk($).
+		<h3>Success Optimizer</h3>
+		<p style="color: #cccccc;">
+			Try out different values of one variable to see which setting gives you the highest chance of success.
+			Everything else stays the same, so you can discover that “sweet spot” for, say, risk per trade.
 		</p>
-		<label for="sweepVar">Sweep Variable:</label>
+		<label for="sweepVar">Which variable would you like to tweak?</label>
 		<select id="sweepVar">
-			<option value="risk">Risk per Trade</option>
+			<option value="risk">Risk per Trade ($)</option>
 			<option value="rrMin">RR Min</option>
 			<option value="rrMax">RR Max</option>
 			<option value="winRate">Win Rate (%)</option>
-			<option value="chanceTrade">Chance Trade (%)</option>
-			<option value="tradingDays">Trading Days</option>
+			<option value="chanceTrade">Chance to Trade (%)</option>
+			<option value="tradingDays">Number of Trading Days</option>
 			<option value="maxTrades">Max Trades/Day</option>
-			<option value="monthlyGoal">Monthly Goal</option>
-			<option value="failThreshold">Fail Threshold</option>
+			<option value="monthlyGoal">Profit Goal ($)</option>
+			<option value="failThreshold">Fail Threshold ($)</option>
 		</select>
 	</div>
 	<div class="input-group">
@@ -263,14 +267,15 @@
 		<input type="number" id="sweepMax" value="1500" />
 	</div>
 	<div class="input-group">
-		<label for="sweepStep">Step:</label>
+		<label for="sweepStep">Step increment:</label>
 		<input type="number" id="sweepStep" value="50" />
 	</div>
 	<div class="input-group">
-		<label for="sweepRuns">Simulations per step:</label>
+		<label for="sweepRuns">Simulations per value:</label>
 		<input type="number" id="sweepRuns" value="10000" />
 	</div>
-	<button id="runSweep">Run Sweep</button>
+	<button id="runSweep">Run Success Optimizer</button>
+	<div id="sweepSummary"></div>
 	<div class="canvas-container">
 		<canvas id="sweepChart"></canvas>
 	</div>
@@ -279,6 +284,7 @@
 		let balanceChartInstance = null;
 		let sweepChartInstance = null;
 
+		// Update the label as user drags speed slider
 		const speedRange = document.getElementById('speedRange');
 		const speedLabel = document.getElementById('speedLabel');
 		speedRange.oninput = () => {
@@ -297,6 +303,7 @@
 		};
 		multiSpeedRange.oninput();
 
+		// Core simulation logic
 		function prepareSimulationData(params) {
 			const { monthlyGoal, failThreshold, tradingDays, maxTrades, chanceTrade, risk, rrMin, rrMax, winRate } = params;
 			let balance = 0;
@@ -314,6 +321,7 @@
 					dayTrades.push([]);
 					continue;
 				}
+				// Decide if we trade this day
 				if (Math.random() > chanceTrade) {
 					balanceHistory.push(balance);
 					dayTrades.push([]);
@@ -329,6 +337,7 @@
 					tradesThisDay.push((isWin ? "+" : "-") + Math.abs(profitOrLoss).toFixed(0));
 					if (isWin) winCount++; else lossCount++;
 					totalTrades++;
+					// Check if we've hit goal or failure
 					if (balance >= monthlyGoal) {
 						stopped = true;
 						stopDay = day;
@@ -352,9 +361,12 @@
 			};
 		}
 
+		// Draw the single-simulation chart + daily journal
 		function animateSimulation(data, delay, params, disableAnim, callback) {
 			const { balanceHistory, dayTrades, finalBalance, stopDay, totalTrades, winCount, lossCount } = data;
 			const tradingDays = balanceHistory.length;
+
+			// Clear old chart if present
 			if (balanceChartInstance) balanceChartInstance.destroy();
 			const ctx = document.getElementById('balanceChart').getContext('2d');
 			balanceChartInstance = new Chart(ctx, {
@@ -392,6 +404,7 @@
 				}
 			});
 
+			// Build daily journal
 			const journalContainer = document.getElementById('journal');
 			journalContainer.innerHTML = '';
 			for (let i = 0; i < tradingDays; i++) {
@@ -400,15 +413,16 @@
 				journalContainer.appendChild(dayDiv);
 			}
 
+			// After chart finishes, show summary
 			function displaySummary() {
 				const statusColor = finalBalance >= params.monthlyGoal ? '#4caf50'
 					: finalBalance <= params.failThreshold ? '#f44336'
 						: '#ffeb3b';
 				const status = finalBalance >= params.monthlyGoal
-					? 'You reached the Goal!'
+					? 'Congratulations! You reached your profit goal!'
 					: finalBalance <= params.failThreshold
-						? 'You Failed!'
-						: 'You did not complete the Goal!';
+						? 'Oops! You hit your fail threshold!'
+						: 'You didn’t quite hit your goal or hit the fail threshold in time.';
 				const winPct = totalTrades > 0 ? ((winCount / totalTrades) * 100).toFixed(1) : '0.0';
 				const pnlText = finalBalance >= 0 ? '$' + finalBalance.toFixed(0) + ' profit'
 					: '$' + Math.abs(finalBalance).toFixed(0) + ' loss';
@@ -416,7 +430,7 @@
 				const summaryDiv = document.getElementById('summary');
 				summaryDiv.innerHTML = `
 					<h1 style="color: ${statusColor};">${status}</h1>
-					<h2>${pnlText} in ${daysText} days, with ${totalTrades} trades, ${winCount} wins, ${lossCount} losses (${winPct}% win rate)</h2>
+					<h2>You ended with ${pnlText} after ${daysText} days, making ${totalTrades} trades with ${winCount} wins and ${lossCount} losses (${winPct}% win rate).</h2>
 				`;
 				if (callback) callback();
 			}
@@ -442,6 +456,7 @@
 				step();
 			}
 
+			// Helper to draw each day on chart + journal
 			function updateDay(dayIndex) {
 				const trades = dayTrades[dayIndex - 1];
 				const pnl = trades.reduce((sum, val) => sum + parseFloat(val), 0);
@@ -483,6 +498,7 @@
 			}
 		}
 
+		// Single simulation button
 		document.getElementById('runSim').addEventListener('click', () => {
 			const runButton = document.getElementById('runSim');
 			const multiButton = document.getElementById('runMulti');
@@ -507,7 +523,10 @@
 			const speedVal = parseInt(speedRange.value, 10);
 			const delay = speedVal >= parseInt(speedRange.max, 10) ? 0 : Math.round(1000 / speedVal);
 
-			window.params = { monthlyGoal, failThreshold, tradingDays, maxTrades, chanceTrade, risk, rrMin, rrMax, winRate };
+			window.params = {
+				monthlyGoal, failThreshold, tradingDays,
+				maxTrades, chanceTrade, risk, rrMin, rrMax, winRate
+			};
 
 			const data = prepareSimulationData(window.params);
 			animateSimulation(data, delay, window.params, false, () => {
@@ -517,6 +536,7 @@
 			});
 		});
 
+		// Multi-simulation button
 		document.getElementById('runMulti').addEventListener('click', () => {
 			const runButton = document.getElementById('runSim');
 			const multiButton = document.getElementById('runMulti');
@@ -542,7 +562,10 @@
 			const multiSpeedVal = parseInt(multiSpeedRange.value, 10);
 			const simDelay = multiSpeedVal >= parseInt(multiSpeedRange.max, 10) ? 0 : Math.round(1000 / multiSpeedVal);
 
-			const paramsMulti = { monthlyGoal, failThreshold, tradingDays, maxTrades, chanceTrade, risk, rrMin, rrMax, winRate };
+			const paramsMulti = {
+				monthlyGoal, failThreshold, tradingDays,
+				maxTrades, chanceTrade, risk, rrMin, rrMax, winRate
+			};
 
 			let passedCount = 0;
 			let failedCount = 0;
@@ -554,6 +577,7 @@
 			let sumLosses = 0;
 			let lastData;
 
+			// After all runs complete, show conversational summary
 			const displayMultiSummary = () => {
 				const total = numRuns;
 				const passPct = ((passedCount / total) * 100).toFixed(2);
@@ -567,14 +591,15 @@
 				const multiDiv = document.getElementById('multiSummary');
 				multiDiv.innerHTML = `
 					<h1>Multi Simulation Results (${total} runs)</h1>
-					<p>We ran the simulation <strong>${total}</strong> times to see how often you would meet your goal, hit your failure threshold, or end in between.</p>
-					<p>Your overall success rate was <strong>${passPct}%</strong>. In other words, out of ${total} challenges, you passed <strong>${passedCount}</strong> (${passPct}%) and failed <strong>${failedCount}</strong> (${failPct}%). The remaining <strong>${incompleteCount}</strong> (${incPct}%) neither reached the goal nor hit the failure threshold by the end of the trading days.</p>
-					<p>On average, across all ${total} runs:</p>
+					<p>We ran this trading challenge <strong>${total}</strong> times with these settings.</p>
+					<p>Out of those <strong>${total}</strong> runs, you <strong>passed</strong> in <strong>${passedCount}</strong> attempts (${passPct}%), and you <strong>failed</strong> in <strong>${failedCount}</strong> attempts (${failPct}%).</p>
+					<p>The remaining <strong>${incompleteCount}</strong> runs (${incPct}%) neither reached your profit goal nor hit your fail threshold by day ${tradingDays}.</p>
+					<p>On average across all runs:</p>
 					<ul>
-						<li>You finished with $<strong>${avgBalance}</strong> as your final balance.</li>
-						<li>You stopped trading after <strong>${avgDays}</strong> days (either reaching a limit or just completing all days).</li>
-						<li>You made about <strong>${avgTrades}</strong> trades per simulation.</li>
-						<li>Your trades were successful <strong>${avgWinPct}%</strong> of the time.</li>
+						<li>You ended with $<strong>${avgBalance}</strong> in your account.</li>
+						<li>You stopped trading after <strong>${avgDays}</strong> days (either because you hit a limit or simply finished the day count).</li>
+						<li>You executed about <strong>${avgTrades}</strong> trades per run.</li>
+						<li>Your win rate across all trades was <strong>${avgWinPct}%</strong>.</li>
 					</ul>
 				`;
 				runButton.disabled = false;
@@ -623,6 +648,7 @@
 			}
 		});
 
+		// Success optimizer (sweep) button
 		document.getElementById('runSweep').addEventListener('click', () => {
 			const runButton = document.getElementById('runSim');
 			const multiButton = document.getElementById('runMulti');
@@ -631,6 +657,7 @@
 			multiButton.disabled = true;
 			sweepButton.disabled = true;
 			if (sweepChartInstance) sweepChartInstance.destroy();
+			document.getElementById('sweepSummary').innerHTML = '';
 
 			const baseMonthlyGoal = parseFloat(document.getElementById('monthlyGoal').value);
 			const baseFailThreshold = parseFloat(document.getElementById('fail').value);
@@ -683,6 +710,21 @@
 				yValues.push(successRate.toFixed(2));
 			}
 
+			// Determine best value
+			const ratesNum = yValues.map(val => parseFloat(val));
+			const maxRate = Math.max(...ratesNum);
+			const maxIndex = ratesNum.indexOf(maxRate);
+			const bestX = xValues[maxIndex];
+
+			// Conversational summary for optimizer
+			const sweepSumDiv = document.getElementById('sweepSummary');
+			sweepSumDiv.innerHTML = `
+				<h1>Optimizer Summary</h1>
+				<p>You varied <strong>${sweepVar}</strong> from <strong>${minVal}</strong> to <strong>${maxVal}</strong> in steps of <strong>${stepVal}</strong>, running <strong>${runsPerVal}</strong> simulations for each value.</p>
+				<p>The best success rate was <strong>${maxRate.toFixed(2)}%</strong> when <strong>${sweepVar} = ${bestX}</strong>.</p>
+			`;
+
+			// Draw the success rate chart
 			const ctx = document.getElementById('sweepChart').getContext('2d');
 			sweepChartInstance = new Chart(ctx, {
 				type: 'line',
