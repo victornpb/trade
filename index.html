@@ -162,7 +162,8 @@
 
 <body>
 	<h1>Can you pass the challenge?</h1>
-	<p style="color: #cccccc;">Adjust the parameters below and see your results—every run is a randomized trading simulation.</p>
+	<p style="color: #cccccc;">Adjust these settings and see your results—each run is a randomized trading simulation.</p>
+
 	<div class="input-group">
 		<label for="monthlyGoal">Profit Goal:</label>
 		<input type="number" id="monthlyGoal" value="3000" />
@@ -190,11 +191,11 @@
 		$ <input type="number" id="risk" value="500" />
 	</div>
 	<div class="input-group">
-		<label for="rrMin">Risk:Reward Range (Min):</label>
+		<label for="rrMin">Risk:Reward (Min):</label>
 		<input type="number" id="rrMin" value="1.5" step="0.1" />
 	</div>
 	<div class="input-group">
-		<label for="rrMax">Risk:Reward Range (Max):</label>
+		<label for="rrMax">Risk:Reward (Max):</label>
 		<input type="number" id="rrMax" value="2.0" step="0.1" />
 	</div>
 	<div class="input-group">
@@ -202,6 +203,7 @@
 		<input type="number" id="winRate" value="60" step="0.1" /> %
 	</div>
 	<hr>
+
 	<h2>Simulation</h2>
 	<div style="display: flex; flex-wrap: wrap; gap: 20px;">
 		<div>
@@ -228,6 +230,7 @@
 		</div>
 	</div>
 	<hr>
+
 	<div>
 		<div id="multiSummary"></div>
 		<div id="summary"></div>
@@ -235,17 +238,19 @@
 			<div id="journal"></div>
 			<div class="canvas-container">
 				<canvas id="balanceChart"></canvas>
+				<canvas id="scatterChart" style="display: none;"></canvas>
 			</div>
 		</div>
 	</div>
 	<hr>
+
 	<div class="input-group">
 		<h3>Success Optimizer</h3>
 		<p style="color: #cccccc;">
-			Try out different values of one variable to see which setting gives you the highest chance of success.
-			Everything else stays the same, so you can discover that “sweet spot” for, say, risk per trade.
+			Try out different values of one variable to find the best chance of hitting your goal.
+			Everything else stays the same.
 		</p>
-		<label for="sweepVar">Which variable would you like to tweak?</label>
+		<label for="sweepVar">Which variable to tweak?</label>
 		<select id="sweepVar">
 			<option value="risk">Risk per Trade ($)</option>
 			<option value="rrMin">RR Min</option>
@@ -271,7 +276,7 @@
 		<input type="number" id="sweepStep" value="50" />
 	</div>
 	<div class="input-group">
-		<label for="sweepRuns">Simulations per value:</label>
+		<label for="sweepRuns">Runs per value:</label>
 		<input type="number" id="sweepRuns" value="10000" />
 	</div>
 	<button id="runSweep">Run Success Optimizer</button>
@@ -282,9 +287,10 @@
 
 	<script>
 		let balanceChartInstance = null;
+		let scatterChartInstance = null;
 		let sweepChartInstance = null;
 
-		// Update the label as user drags speed slider
+		// Update labels for sliders
 		const speedRange = document.getElementById('speedRange');
 		const speedLabel = document.getElementById('speedLabel');
 		speedRange.oninput = () => {
@@ -303,7 +309,7 @@
 		};
 		multiSpeedRange.oninput();
 
-		// Core simulation logic
+		// Prepare one simulation’s data
 		function prepareSimulationData(params) {
 			const { monthlyGoal, failThreshold, tradingDays, maxTrades, chanceTrade, risk, rrMin, rrMax, winRate } = params;
 			let balance = 0;
@@ -321,7 +327,7 @@
 					dayTrades.push([]);
 					continue;
 				}
-				// Decide if we trade this day
+				// Decide if we trade today
 				if (Math.random() > chanceTrade) {
 					balanceHistory.push(balance);
 					dayTrades.push([]);
@@ -361,14 +367,20 @@
 			};
 		}
 
-		// Draw the single-simulation chart + daily journal
+		// Draw single-simulation chart + journal of each day
 		function animateSimulation(data, delay, params, disableAnim, callback) {
 			const { balanceHistory, dayTrades, finalBalance, stopDay, totalTrades, winCount, lossCount } = data;
 			const tradingDays = balanceHistory.length;
 
-			// Clear old chart if present
+			// Show and reset balance chart
+			const balanceCanvas = document.getElementById('balanceChart');
+			balanceCanvas.style.display = 'block';
+			const journalContainer = document.getElementById('journal');
+			journalContainer.style.display = 'flex';
+
+			// Destroy any prior chart
 			if (balanceChartInstance) balanceChartInstance.destroy();
-			const ctx = document.getElementById('balanceChart').getContext('2d');
+			const ctx = balanceCanvas.getContext('2d');
 			balanceChartInstance = new Chart(ctx, {
 				type: 'line',
 				data: {
@@ -404,8 +416,7 @@
 				}
 			});
 
-			// Build daily journal
-			const journalContainer = document.getElementById('journal');
+			// Build the daily journal
 			journalContainer.innerHTML = '';
 			for (let i = 0; i < tradingDays; i++) {
 				const dayDiv = document.createElement('div');
@@ -413,7 +424,7 @@
 				journalContainer.appendChild(dayDiv);
 			}
 
-			// After chart finishes, show summary
+			// After animating, show summary
 			function displaySummary() {
 				const statusColor = finalBalance >= params.monthlyGoal ? '#4caf50'
 					: finalBalance <= params.failThreshold ? '#f44336'
@@ -422,7 +433,7 @@
 					? 'Congratulations! You reached your profit goal!'
 					: finalBalance <= params.failThreshold
 						? 'Oops! You hit your fail threshold!'
-						: 'You didn’t quite hit your goal or hit the fail threshold in time.';
+						: 'You didn’t reach your goal or hit your fail threshold by the end.';
 				const winPct = totalTrades > 0 ? ((winCount / totalTrades) * 100).toFixed(1) : '0.0';
 				const pnlText = finalBalance >= 0 ? '$' + finalBalance.toFixed(0) + ' profit'
 					: '$' + Math.abs(finalBalance).toFixed(0) + ' loss';
@@ -456,7 +467,6 @@
 				step();
 			}
 
-			// Helper to draw each day on chart + journal
 			function updateDay(dayIndex) {
 				const trades = dayTrades[dayIndex - 1];
 				const pnl = trades.reduce((sum, val) => sum + parseFloat(val), 0);
@@ -498,7 +508,7 @@
 			}
 		}
 
-		// Single simulation button
+		// Single simulation
 		document.getElementById('runSim').addEventListener('click', () => {
 			const runButton = document.getElementById('runSim');
 			const multiButton = document.getElementById('runMulti');
@@ -506,9 +516,17 @@
 			runButton.disabled = true;
 			multiButton.disabled = true;
 			sweepButton.disabled = true;
+			// Clear summaries and journal
 			document.getElementById('summary').innerHTML = '';
 			document.getElementById('multiSummary').innerHTML = '';
 			document.getElementById('journal').innerHTML = '';
+			// Hide scatter chart
+			const scatterCanvas = document.getElementById('scatterChart');
+			scatterCanvas.style.display = 'none';
+			// Show balance chart
+			const balanceCanvas = document.getElementById('balanceChart');
+			balanceCanvas.style.display = 'block';
+
 			if (balanceChartInstance) balanceChartInstance.destroy();
 
 			const monthlyGoal = parseFloat(document.getElementById('monthlyGoal').value);
@@ -536,7 +554,7 @@
 			});
 		});
 
-		// Multi-simulation button
+		// Multi simulation
 		document.getElementById('runMulti').addEventListener('click', () => {
 			const runButton = document.getElementById('runSim');
 			const multiButton = document.getElementById('runMulti');
@@ -544,9 +562,16 @@
 			runButton.disabled = true;
 			multiButton.disabled = true;
 			sweepButton.disabled = true;
+			// Clear summaries and journal
 			document.getElementById('summary').innerHTML = '';
 			document.getElementById('multiSummary').innerHTML = '';
 			document.getElementById('journal').innerHTML = '';
+			// Show scatter chart, hide balance chart initially
+			const balanceCanvas = document.getElementById('balanceChart');
+			balanceCanvas.style.display = 'block'; // needed for flicker
+			const scatterCanvas = document.getElementById('scatterChart');
+			scatterCanvas.style.display = 'block';
+
 			if (balanceChartInstance) balanceChartInstance.destroy();
 
 			const monthlyGoal = parseFloat(document.getElementById('monthlyGoal').value);
@@ -577,8 +602,77 @@
 			let sumLosses = 0;
 			let lastData;
 
-			// After all runs complete, show conversational summary
+			// Prepare scatter chart with three datasets
+			const scatterCtx = scatterCanvas.getContext('2d');
+			if (scatterChartInstance) scatterChartInstance.destroy();
+			const animationSetting = numRuns > 1000 ? false : { duration: 300 };
+			scatterChartInstance = new Chart(scatterCtx, {
+				type: 'scatter',
+				data: {
+					datasets: [
+						{
+							label: 'Passed',
+							data: [],
+							backgroundColor: 'rgb(76, 175, 80)',
+							pointRadius: 3,
+							borderWidth: 0
+						},
+						{
+							label: 'Failed',
+							data: [],
+							backgroundColor: 'rgb(244, 67, 54)',
+							pointRadius: 3,
+							borderWidth: 0
+						},
+						{
+							label: 'Incomplete',
+							data: [],
+							backgroundColor: 'rgb(255, 193, 7)',
+							pointRadius: 3,
+							borderWidth: 0
+						}
+					]
+				},
+				options: {
+					animation: animationSetting,
+					plugins: {
+						legend: {
+							labels: { color: '#e0e0e0' }
+						},
+						title: {
+							display: true,
+							text: 'Multi-Simulation Final PnL Results',
+							color: '#ffffff',
+							font: {
+								size: 18
+							}
+						}
+					},
+					scales: {
+						x: {
+							title: { display: true, text: 'Simulation Number', color: '#e0e0e0' },
+							ticks: { color: '#e0e0e0' },
+							grid: { color: '#333' }
+						},
+						y: {
+							title: { display: true, text: 'Final PnL ($)', color: '#e0e0e0' },
+							ticks: { color: '#e0e0e0' },
+							grid: { color: '#333' }
+						}
+					}
+				}
+			});
+
+			// After running all, show scatter + summary
 			const displayMultiSummary = () => {
+				// Hide daily chart and journal
+				document.getElementById('journal').innerHTML = '';
+				if (balanceChartInstance) {
+					balanceChartInstance.destroy();
+					balanceCanvas.style.display = 'none';
+				}
+				scatterCanvas.style.display = 'block';
+
 				const total = numRuns;
 				const passPct = ((passedCount / total) * 100).toFixed(2);
 				const failPct = ((failedCount / total) * 100).toFixed(2);
@@ -597,17 +691,19 @@
 					<p>On average across all runs:</p>
 					<ul>
 						<li>You ended with $<strong>${avgBalance}</strong> in your account.</li>
-						<li>You stopped trading after <strong>${avgDays}</strong> days (either because you hit a limit or simply finished the day count).</li>
+						<li>You stopped trading after <strong>${avgDays}</strong> days (either because you hit a limit or simply completed the day count).</li>
 						<li>You executed about <strong>${avgTrades}</strong> trades per run.</li>
 						<li>Your win rate across all trades was <strong>${avgWinPct}%</strong>.</li>
 					</ul>
 				`;
+
 				runButton.disabled = false;
 				multiButton.disabled = false;
 				sweepButton.disabled = false;
 			};
 
 			if (simDelay === 0) {
+				// Instant: skip flicker, just run and populate scatter
 				for (let i = 0; i < numRuns; i++) {
 					const data = prepareSimulationData(paramsMulti);
 					lastData = data;
@@ -616,18 +712,28 @@
 					sumTrades += data.totalTrades;
 					sumWins += data.winCount;
 					sumLosses += data.lossCount;
-					if (data.finalBalance >= monthlyGoal) passedCount++;
-					else if (data.finalBalance <= failThreshold) failedCount++;
-					else incompleteCount++;
+					if (data.finalBalance >= monthlyGoal) {
+						passedCount++;
+						scatterChartInstance.data.datasets[0].data.push({ x: i + 1, y: data.finalBalance });
+					} else if (data.finalBalance <= failThreshold) {
+						failedCount++;
+						scatterChartInstance.data.datasets[1].data.push({ x: i + 1, y: data.finalBalance });
+					} else {
+						incompleteCount++;
+						scatterChartInstance.data.datasets[2].data.push({ x: i + 1, y: data.finalBalance });
+					}
 				}
-				animateSimulation(lastData, 0, paramsMulti, true, displayMultiSummary);
+				// Show scatter and summary
+				displayMultiSummary();
+				scatterChartInstance.update();
 			} else {
 				let runIndex = 0;
 				function runNextSimulation() {
 					if (runIndex >= numRuns) {
-						animateSimulation(lastData, 0, paramsMulti, true, displayMultiSummary);
+						displayMultiSummary();
 						return;
 					}
+					// Animate one run with flicker
 					const data = prepareSimulationData(paramsMulti);
 					lastData = data;
 					sumFinalBalance += data.finalBalance;
@@ -635,11 +741,19 @@
 					sumTrades += data.totalTrades;
 					sumWins += data.winCount;
 					sumLosses += data.lossCount;
-					if (data.finalBalance >= monthlyGoal) passedCount++;
-					else if (data.finalBalance <= failThreshold) failedCount++;
-					else incompleteCount++;
+					if (data.finalBalance >= monthlyGoal) {
+						passedCount++;
+						scatterChartInstance.data.datasets[0].data.push({ x: runIndex + 1, y: data.finalBalance });
+					} else if (data.finalBalance <= failThreshold) {
+						failedCount++;
+						scatterChartInstance.data.datasets[1].data.push({ x: runIndex + 1, y: data.finalBalance });
+					} else {
+						incompleteCount++;
+						scatterChartInstance.data.datasets[2].data.push({ x: runIndex + 1, y: data.finalBalance });
+					}
 
 					animateSimulation(data, 0, paramsMulti, true, () => {
+						scatterChartInstance.update();
 						runIndex++;
 						setTimeout(runNextSimulation, simDelay);
 					});
@@ -648,7 +762,7 @@
 			}
 		});
 
-		// Success optimizer (sweep) button
+		// Success optimizer (sweep)
 		document.getElementById('runSweep').addEventListener('click', () => {
 			const runButton = document.getElementById('runSim');
 			const multiButton = document.getElementById('runMulti');
@@ -701,7 +815,10 @@
 					else if (sweepVar === 'monthlyGoal') monthlyGoal = v;
 					else if (sweepVar === 'failThreshold') failThreshold = v;
 
-					const params = { monthlyGoal, failThreshold, tradingDays, maxTrades, chanceTrade, risk, rrMin, rrMax, winRate };
+					const params = {
+						monthlyGoal, failThreshold, tradingDays,
+						maxTrades, chanceTrade, risk, rrMin, rrMax, winRate
+					};
 					const data = prepareSimulationData(params);
 					if (data.finalBalance >= monthlyGoal) passedCount++;
 				}
@@ -710,21 +827,21 @@
 				yValues.push(successRate.toFixed(2));
 			}
 
-			// Determine best value
+			// Identify best setting
 			const ratesNum = yValues.map(val => parseFloat(val));
 			const maxRate = Math.max(...ratesNum);
 			const maxIndex = ratesNum.indexOf(maxRate);
 			const bestX = xValues[maxIndex];
 
-			// Conversational summary for optimizer
+			// Conversational optimizer summary
 			const sweepSumDiv = document.getElementById('sweepSummary');
 			sweepSumDiv.innerHTML = `
 				<h1>Optimizer Summary</h1>
-				<p>You varied <strong>${sweepVar}</strong> from <strong>${minVal}</strong> to <strong>${maxVal}</strong> in steps of <strong>${stepVal}</strong>, running <strong>${runsPerVal}</strong> simulations for each value.</p>
-				<p>The best success rate was <strong>${maxRate.toFixed(2)}%</strong> when <strong>${sweepVar} = ${bestX}</strong>.</p>
+				<p>You tried values of <strong>${sweepVar}</strong> from <strong>${minVal}</strong> to <strong>${maxVal}</strong> in steps of <strong>${stepVal}</strong>. For each value, you ran <strong>${runsPerVal}</strong> simulations.</p>
+				<p>The highest success rate was <strong>${maxRate.toFixed(2)}%</strong> when <strong>${sweepVar} = ${bestX}</strong>.</p>
 			`;
 
-			// Draw the success rate chart
+			// Draw sweep chart
 			const ctx = document.getElementById('sweepChart').getContext('2d');
 			sweepChartInstance = new Chart(ctx, {
 				type: 'line',
