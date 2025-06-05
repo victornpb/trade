@@ -116,13 +116,17 @@
 			font-size: 13px;
 			color: #cccccc;
 		}
+		.canvas-container {
+			width: 100%;
+			max-width: 800px;
+			margin: 20px auto;
+		}
 		canvas {
 			width: 100%;
 			height: 250px !important;
 			background-color: #1e1e1e;
 			border: 1px solid #333;
 			border-radius: 4px;
-			margin-top: 20px;
 		}
 	</style>
 </head>
@@ -165,6 +169,7 @@
 	</div>
 	<hr>
 	<div class="input-group">
+    <h3>Simulation</h3>
 		<label for="speedRange">Single Simulation Speed:</label>
 		<input type="range" id="speedRange" min="1" max="61" step="1" value="10" />
 		<span id="speedLabel"></span>
@@ -172,10 +177,13 @@
 	<button id="runSim">Run Simulation</button>
 	<div id="summary"></div>
 	<div id="journal"></div>
-	<canvas id="balanceChart"></canvas>
+	<div class="canvas-container">
+		<canvas id="balanceChart"></canvas>
+	</div>
 
 	<hr>
 	<div class="input-group">
+    <h3>Multi pass simulation</h3>
 		<label for="numRuns">Number of Simulations:</label>
 		<input type="number" id="numRuns" value="100" />
 	</div>
@@ -189,6 +197,10 @@
 
 	<hr>
 	<div class="input-group">
+    <h3>Success optimizer</h3>
+    <p>
+    Run the simulation multiple times, plotting the success rate for multiple values of a single variable. All other variables are kept unchanged, so you can see how each variable affects your overall probability and so you can find the sweet spot of one parameter e.g.: Risk($).
+    </p>
 		<label for="sweepVar">Sweep Variable:</label>
 		<select id="sweepVar">
 			<option value="risk">Risk per Trade</option>
@@ -203,23 +215,25 @@
 		</select>
 	</div>
 	<div class="input-group">
-		<label for="sweepMin">Min:</label>
+		<label for="sweepMin">Start value:</label>
 		<input type="number" id="sweepMin" value="100" />
 	</div>
 	<div class="input-group">
-		<label for="sweepMax">Max:</label>
-		<input type="number" id="sweepMax" value="1000" />
+		<label for="sweepMax">End value:</label>
+		<input type="number" id="sweepMax" value="1500" />
 	</div>
 	<div class="input-group">
 		<label for="sweepStep">Step:</label>
 		<input type="number" id="sweepStep" value="50" />
 	</div>
 	<div class="input-group">
-		<label for="sweepRuns">Runs per Value:</label>
+		<label for="sweepRuns">Simulations per step:</label>
 		<input type="number" id="sweepRuns" value="10000" />
 	</div>
 	<button id="runSweep">Run Sweep</button>
-	<canvas id="sweepChart"></canvas>
+	<div class="canvas-container">
+		<canvas id="sweepChart"></canvas>
+	</div>
 
 	<script>
 		let balanceChartInstance = null;
@@ -440,7 +454,6 @@
 			document.getElementById('multiSummary').innerHTML = '';
 			document.getElementById('journal').innerHTML = '';
 			if (balanceChartInstance) balanceChartInstance.destroy();
-			// do not destroy sweepChartInstance here
 
 			const monthlyGoal = parseFloat(document.getElementById('monthlyGoal').value);
 			const failThreshold = parseFloat(document.getElementById('fail').value);
@@ -475,7 +488,6 @@
 			document.getElementById('multiSummary').innerHTML = '';
 			document.getElementById('journal').innerHTML = '';
 			if (balanceChartInstance) balanceChartInstance.destroy();
-			// do not destroy sweepChartInstance here
 
 			const monthlyGoal = parseFloat(document.getElementById('monthlyGoal').value);
 			const failThreshold = parseFloat(document.getElementById('fail').value);
@@ -486,7 +498,7 @@
 			const rrMin = parseFloat(document.getElementById('rrMin').value);
 			const rrMax = parseFloat(document.getElementById('rrMax').value);
 			const winRate = parseFloat(document.getElementById('winRate').value) / 100;
-			const numRuns = parseInt(document.getElementById('numRuns').value, 10);
+			const numRuns = parseInt(document.getElementById('numRuns').value, 10); 
 			const multiSpeedVal = parseInt(multiSpeedRange.value, 10);
 			const simDelay = multiSpeedVal >= parseInt(multiSpeedRange.max, 10) ? 0 : Math.round(1000 / multiSpeedVal);
 
@@ -580,7 +592,6 @@
 			runButton.disabled = true;
 			multiButton.disabled = true;
 			sweepButton.disabled = true;
-			// do not destroy balanceChartInstance here
 			if (sweepChartInstance) sweepChartInstance.destroy();
 
 			const baseMonthlyGoal = parseFloat(document.getElementById('monthlyGoal').value);
