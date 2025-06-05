@@ -232,13 +232,18 @@
 	<hr>
 
 	<div>
+		<!-- multi sim results -->
 		<div id="multiSummary"></div>
+		<div class="canvas-container">
+			<canvas id="scatterChart" style="display: none;"></canvas>
+		</div>
+		
+		<!-- single simulation results -->
 		<div id="summary"></div>
 		<div id="simResult">
 			<div id="journal"></div>
 			<div class="canvas-container">
 				<canvas id="balanceChart"></canvas>
-				<canvas id="scatterChart" style="display: none;"></canvas>
 			</div>
 		</div>
 	</div>
@@ -666,11 +671,12 @@
 			// After running all, show scatter + summary
 			const displayMultiSummary = () => {
 				// Hide daily chart and journal
+				document.getElementById('summary').innerHTML = '';
 				document.getElementById('journal').innerHTML = '';
 				if (balanceChartInstance) {
 					balanceChartInstance.destroy();
-					balanceCanvas.style.display = 'none';
 				}
+				balanceCanvas.style.display = 'none';
 				scatterCanvas.style.display = 'block';
 
 				const total = numRuns;
@@ -764,6 +770,18 @@
 
 		// Success optimizer (sweep)
 		document.getElementById('runSweep').addEventListener('click', () => {
+
+			// Clear summaries and journal
+			document.getElementById('summary').innerHTML = '';
+			document.getElementById('multiSummary').innerHTML = '';
+			document.getElementById('journal').innerHTML = '';
+			// Hide scatter chart
+			const scatterCanvas = document.getElementById('scatterChart');
+			scatterCanvas.style.display = 'none';
+			// Show balance chart
+			const balanceCanvas = document.getElementById('balanceChart');
+			balanceCanvas.style.display = 'none';
+
 			const runButton = document.getElementById('runSim');
 			const multiButton = document.getElementById('runMulti');
 			const sweepButton = document.getElementById('runSweep');
