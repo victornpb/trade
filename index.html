@@ -691,15 +691,14 @@
 				const multiDiv = document.getElementById('multiSummary');
 				multiDiv.innerHTML = `
 					<h1>Multi Simulation Results (${total} runs)</h1>
-					<p>We ran this trading challenge <strong>${total}</strong> times with these settings.</p>
-					<p>Out of those <strong>${total}</strong> runs, you <strong>passed</strong> in <strong>${passedCount}</strong> attempts (${passPct}%), and you <strong>failed</strong> in <strong>${failedCount}</strong> attempts (${failPct}%).</p>
-					<p>The remaining <strong>${incompleteCount}</strong> runs (${incPct}%) neither reached your profit goal nor hit your fail threshold by day ${tradingDays}.</p>
-					<p>On average across all runs:</p>
+					<p>We ran this trading challenge <strong>${total}</strong> times using your current settings.</p>
+					<p>Of those <strong>${total}</strong> attempts, <strong>${passedCount}</strong> (${passPct}%) <span style="color:#4caf50;">passed</span> (hit the profit goal), <strong>${failedCount}</strong> (${failPct}%) <span style="color:#f44336;">failed</span> (hit the loss threshold), and <strong>${incompleteCount}</strong> (${incPct}%) neither hit the goal nor the threshold by day ${tradingDays}.</p>
+					<p>On average over all runs:</p>
 					<ul>
-						<li>You ended with $<strong>${avgBalance}</strong> in your account.</li>
-						<li>You stopped trading after <strong>${avgDays}</strong> days (either because you hit a limit or simply completed the day count).</li>
+						<li>Final balance was <strong>$${avgBalance}</strong>.</li>
+						<li>Trading stopped after <strong>${avgDays}</strong> days (either by hitting a threshold or completing all days).</li>
 						<li>You executed about <strong>${avgTrades}</strong> trades per run.</li>
-						<li>Your win rate across all trades was <strong>${avgWinPct}%</strong>.</li>
+						<li>Your trade win rate across all simulated trades was <strong>${avgWinPct}%</strong>.</li>
 					</ul>
 				`;
 
@@ -775,12 +774,9 @@
 			document.getElementById('summary').innerHTML = '';
 			document.getElementById('multiSummary').innerHTML = '';
 			document.getElementById('journal').innerHTML = '';
-			// Hide scatter chart
-			const scatterCanvas = document.getElementById('scatterChart');
-			scatterCanvas.style.display = 'none';
-			// Show balance chart
-			const balanceCanvas = document.getElementById('balanceChart');
-			balanceCanvas.style.display = 'none';
+			// Hide scatter and balance charts
+			document.getElementById('scatterChart').style.display = 'none';
+			document.getElementById('balanceChart').style.display = 'none';
 
 			const runButton = document.getElementById('runSim');
 			const multiButton = document.getElementById('runMulti');
@@ -809,6 +805,7 @@
 
 			const xValues = [];
 			const yValues = [];
+			const allRates = [];
 
 			for (let v = minVal; v <= maxVal; v += stepVal) {
 				let passedCount = 0;
@@ -843,20 +840,29 @@
 				const successRate = (passedCount / runsPerVal) * 100;
 				xValues.push(v);
 				yValues.push(successRate.toFixed(2));
+				allRates.push(successRate);
 			}
 
-			// Identify best setting
-			const ratesNum = yValues.map(val => parseFloat(val));
-			const maxRate = Math.max(...ratesNum);
-			const maxIndex = ratesNum.indexOf(maxRate);
+			// Identify best and worst
+			const maxRate = Math.max(...allRates);
+			const minRate = Math.min(...allRates);
+			const maxIndex = allRates.indexOf(maxRate);
+			const minIndex = allRates.indexOf(minRate);
 			const bestX = xValues[maxIndex];
+			const worstX = xValues[minIndex];
+
+			// Compute average success across all tested values
+			const avgSuccess = (allRates.reduce((a, b) => a + b, 0) / allRates.length).toFixed(2);
 
 			// Conversational optimizer summary
 			const sweepSumDiv = document.getElementById('sweepSummary');
 			sweepSumDiv.innerHTML = `
 				<h1>Optimizer Summary</h1>
-				<p>You tried values of <strong>${sweepVar}</strong> from <strong>${minVal}</strong> to <strong>${maxVal}</strong> in steps of <strong>${stepVal}</strong>. For each value, you ran <strong>${runsPerVal}</strong> simulations.</p>
-				<p>The highest success rate was <strong>${maxRate.toFixed(2)}%</strong> when <strong>${sweepVar} = ${bestX}</strong>.</p>
+				<p>We tested <strong>${xValues.length}</strong> different values of <strong>${sweepVar}</strong> from <strong>${minVal}</strong> to <strong>${maxVal}</strong> (step ${stepVal}). For each value, we ran <strong>${runsPerVal}</strong> simulations—so a total of <strong>${xValues.length * runsPerVal}</strong> simulated runs.</p>
+				<p>The best success rate was <strong>${maxRate.toFixed(2)}%</strong> when <strong>${sweepVar} = ${bestX}</strong>.</p>
+				<p>The worst performance was <strong>${minRate.toFixed(2)}%</strong> when <strong>${sweepVar} = ${worstX}</strong>.</p>
+				<p>On average across all tested values, the success rate was <strong>${avgSuccess}%</strong>.</p>
+				<p>Use this to identify which range of <strong>${sweepVar}</strong> tends to give you the highest probability of reaching your goal.</p>
 			`;
 
 			// Draw sweep chart
@@ -878,6 +884,12 @@
 					plugins: {
 						legend: {
 							labels: { color: '#e0e0e0' }
+						},
+						title: {
+							display: true,
+							text: `Success Rate vs. ${sweepVar}`,
+							color: '#ffffff',
+							font: { size: 18 }
 						}
 					},
 					scales: {
