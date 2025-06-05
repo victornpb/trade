@@ -147,7 +147,6 @@
 			margin: 10px;
 			width: 100%;
 			max-width: 800px;
-			/* margin: 20px auto; */
 		}
 
 		canvas {
@@ -417,7 +416,7 @@
 				const summaryDiv = document.getElementById('summary');
 				summaryDiv.innerHTML = `
 					<h1 style="color: ${statusColor};">${status}</h1>
-					<h2>${pnlText} in ${daysText} days, Total of ${totalTrades} trades, ${winCount} wins, ${lossCount} losses (${winPct}%)</h2>
+					<h2>${pnlText} in ${daysText} days, with ${totalTrades} trades, ${winCount} wins, ${lossCount} losses (${winPct}% win rate)</h2>
 				`;
 				if (callback) callback();
 			}
@@ -555,6 +554,34 @@
 			let sumLosses = 0;
 			let lastData;
 
+			const displayMultiSummary = () => {
+				const total = numRuns;
+				const passPct = ((passedCount / total) * 100).toFixed(2);
+				const failPct = ((failedCount / total) * 100).toFixed(2);
+				const incPct = ((incompleteCount / total) * 100).toFixed(2);
+				const avgBalance = (sumFinalBalance / total).toFixed(2);
+				const avgDays = (sumDays / total).toFixed(2);
+				const avgTrades = (sumTrades / total).toFixed(2);
+				const avgWinPct = sumTrades > 0 ? ((sumWins / sumTrades) * 100).toFixed(1) : '0.0';
+
+				const multiDiv = document.getElementById('multiSummary');
+				multiDiv.innerHTML = `
+					<h1>Multi Simulation Results (${total} runs)</h1>
+					<p>We ran the simulation <strong>${total}</strong> times to see how often you would meet your goal, hit your failure threshold, or end in between.</p>
+					<p>Your overall success rate was <strong>${passPct}%</strong>. In other words, out of ${total} challenges, you passed <strong>${passedCount}</strong> (${passPct}%) and failed <strong>${failedCount}</strong> (${failPct}%). The remaining <strong>${incompleteCount}</strong> (${incPct}%) neither reached the goal nor hit the failure threshold by the end of the trading days.</p>
+					<p>On average, across all ${total} runs:</p>
+					<ul>
+						<li>You finished with $<strong>${avgBalance}</strong> as your final balance.</li>
+						<li>You stopped trading after <strong>${avgDays}</strong> days (either reaching a limit or just completing all days).</li>
+						<li>You made about <strong>${avgTrades}</strong> trades per simulation.</li>
+						<li>Your trades were successful <strong>${avgWinPct}%</strong> of the time.</li>
+					</ul>
+				`;
+				runButton.disabled = false;
+				multiButton.disabled = false;
+				sweepButton.disabled = false;
+			};
+
 			if (simDelay === 0) {
 				for (let i = 0; i < numRuns; i++) {
 					const data = prepareSimulationData(paramsMulti);
@@ -568,42 +595,12 @@
 					else if (data.finalBalance <= failThreshold) failedCount++;
 					else incompleteCount++;
 				}
-				animateSimulation(lastData, 0, paramsMulti, true, () => {
-					const avgBalance = (sumFinalBalance / numRuns).toFixed(2);
-					const avgDays = (sumDays / numRuns).toFixed(2);
-					const avgTrades = (sumTrades / numRuns).toFixed(2);
-					const avgWinPct = sumTrades > 0 ? ((sumWins / sumTrades) * 100).toFixed(1) : '0.0';
-					const successRate = ((passedCount / numRuns) * 100).toFixed(2);
-					const multiDiv = document.getElementById('multiSummary');
-					multiDiv.innerHTML = `
-						<h1>Multi Simulation Results (${numRuns} runs)</h1>
-						<h2>Success rate: ${successRate}% (Passed: ${passedCount}, Failed: ${failedCount}, Incomplete: ${incompleteCount})</h2>
-						<h2>Avg Final Balance: $${avgBalance}, Avg Days: ${avgDays}, Avg Trades: ${avgTrades}, Avg Win %: ${avgWinPct}%</h2>
-					`;
-					runButton.disabled = false;
-					multiButton.disabled = false;
-					sweepButton.disabled = false;
-				});
+				animateSimulation(lastData, 0, paramsMulti, true, displayMultiSummary);
 			} else {
 				let runIndex = 0;
 				function runNextSimulation() {
 					if (runIndex >= numRuns) {
-						animateSimulation(lastData, 0, paramsMulti, true, () => {
-							const avgBalance = (sumFinalBalance / numRuns).toFixed(2);
-							const avgDays = (sumDays / numRuns).toFixed(2);
-							const avgTrades = (sumTrades / numRuns).toFixed(2);
-							const avgWinPct = sumTrades > 0 ? ((sumWins / sumTrades) * 100).toFixed(1) : '0.0';
-							const successRate = ((passedCount / numRuns) * 100).toFixed(2);
-							const multiDiv = document.getElementById('multiSummary');
-							multiDiv.innerHTML = `
-								<h1>Multi Simulation Results (${numRuns} runs)</h1>
-								<h2>Success rate: ${successRate}% (Passed: ${passedCount}, Failed: ${failedCount}, Incomplete: ${incompleteCount})</h2>
-								<h2>Avg Final Balance: $${avgBalance}, Avg Days: ${avgDays}, Avg Trades: ${avgTrades}, Avg Win %: ${avgWinPct}%</h2>
-							`;
-							runButton.disabled = false;
-							multiButton.disabled = false;
-							sweepButton.disabled = false;
-						});
+						animateSimulation(lastData, 0, paramsMulti, true, displayMultiSummary);
 						return;
 					}
 					const data = prepareSimulationData(paramsMulti);
