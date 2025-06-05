@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading Simulation</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #121212;
+      color: #e0e0e0;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h1 {
+      color: #ffffff;
+    }
+    .input-group {
+      margin-bottom: 10px;
+    }
+    label {
+      display: inline-block;
+      width: 200px;
+      color: #e0e0e0;
+    }
+    input[type="number"],
+    input[type="range"] {
+      width: 120px;
+      background-color: #1e1e1e;
+      border: 1px solid #333;
+      color: #e0e0e0;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      height: 6px;
+      background: #333;
+      border-radius: 3px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #777;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    button {
+      background-color: #333;
+      color: #e0e0e0;
+      border: 1px solid #444;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #2a2a2a;
+      color: #555;
+      cursor: not-allowed;
+    }
+    hr {
+      border: none;
+      height: 1px;
+      background-color: #333;
+      margin: 15px 0;
+    }
+    #summary,
+    #multiSummary {
+      margin-top: 20px;
+    }
+    #summary h1,
+    #multiSummary h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    #summary h2,
+    #multiSummary h2 {
+      margin: 5px 0 0 0;
+      font-size: 16px;
+      font-weight: normal;
+      color: #cccccc;
+    }
+    #journal {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .journal-day {
+      border: 1px solid #333;
+      background-color: #1e1e1e;
+      padding: 8px;
+      margin: 5px;
+      box-sizing: border-box;
+      width: calc(20% - 10px);
+      opacity: 0;
+      transition: opacity 0.3s;
+      border-radius: 4px;
+    }
+    .journal-day h3 {
+      margin: 0 0 5px 0;
+      font-size: 14px;
+      color: #ffffff;
+    }
+    .journal-day ul {
+      margin: 0 0 5px 15px;
+      padding: 0;
+    }
+    .journal-day ul li {
+      list-style-type: disc;
+      margin-left: 5px;
+      color: #e0e0e0;
+    }
+    .journal-day .pnl {
+      font-weight: bold;
+      font-size: 13px;
+      color: #cccccc;
+    }
+    #balanceChart {
+      background-color: #1e1e1e;
+      margin-top: 20px;
+      border: 1px solid #333;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Are you profitable?</h1>
+  <div class="input-group">
+    <label for="monthlyGoal">Monthly Profit Goal:</label>
+    <input type="number" id="monthlyGoal" value="3000" />
+  </div>
+  <div class="input-group">
+    <label for="fail">Fail Threshold:</label>
+    <input type="number" id="fail" value="-1500" />
+  </div>
+  <div class="input-group">
+    <label for="tradingDays">Trading Days:</label>
+    <input type="number" id="tradingDays" value="20" />
+  </div>
+  <div class="input-group">
+    <label for="chanceTrade">Chance of Trading/Day:</label>
+    <input type="number" id="chanceTrade" value="60" step="0.1" /> %
+  </div>
+  <hr>
+  <div class="input-group">
+    <label for="maxTrades">Max Trades/Day:</label>
+    <input type="number" id="maxTrades" value="1" />
+  </div>
+  <div class="input-group">
+    <label for="risk">Risk per Trade:</label>
+    $ <input type="number" id="risk" value="500" />
+  </div>
+  <div class="input-group">
+    <label for="rrMin">Risk:Reward Range:</label>
+    <input type="number" id="rrMin" value="1.5" step="0.1" /> ..
+    <input type="number" id="rrMax" value="2.0" step="0.1" />
+  </div>
+  <div class="input-group">
+    <label for="winRate">Trade Win Rate:</label>
+    <input type="number" id="winRate" value="60" step="0.1" /> %
+  </div>
+  <hr>
+  <div class="input-group">
+    <label for="speedRange">Single Simulation Speed:</label>
+    <input type="range" id="speedRange" min="1" max="61" step="1" value="10" />
+    <span id="speedLabel"></span>
+  </div>
+  <button id="runSim">Run Simulation</button>
+  <div id="summary"></div>
+  <div id="journal"></div>
+  <canvas id="balanceChart" width="600" height="300"></canvas>
+
+  <!-- Multi Simulation controls placed below everything -->
+  <hr>
+  <div class="input-group">
+    <label for="numRuns">Number of Simulations:</label>
+    <input type="number" id="numRuns" value="100" />
+  </div>
+  <div class="input-group">
+    <label for="multiSpeedRange">Multi Simulation Speed:</label>
+    <input type="range" id="multiSpeedRange" min="1" max="121" step="1" value="25" />
+    <span id="multiSpeedLabel"></span>
+  </div>
+  <button id="runMulti">Run Multi Simulation</button>
+  <div id="multiSummary"></div>
+
+  <script>
+    let chartInstance = null;
+
+    // Single speed slider
+    const speedRange = document.getElementById('speedRange');
+    const speedLabel = document.getElementById('speedLabel');
+    speedRange.oninput = () => {
+      const speedVal = parseInt(speedRange.value, 10);
+      const tps = speedVal >= parseInt(speedRange.max, 10) ? 'Instant' : speedVal + ' trade/s';
+      speedLabel.textContent = tps;
+    };
+    speedRange.oninput();
+
+    // Multi speed slider
+    const multiSpeedRange = document.getElementById('multiSpeedRange');
+    const multiSpeedLabel = document.getElementById('multiSpeedLabel');
+    multiSpeedRange.oninput = () => {
+      const speedVal = parseInt(multiSpeedRange.value, 10);
+      const tps = speedVal >= parseInt(multiSpeedRange.max, 10) ? 'Uncapped' : speedVal + ' sims/s';
+      multiSpeedLabel.textContent = tps;
+    };
+    multiSpeedRange.oninput();
+
+    function prepareSimulationData(params) {
+      const { monthlyGoal, failThreshold, tradingDays, maxTrades, chanceTrade, risk, rrMin, rrMax, winRate } = params;
+      let balance = 0;
+      let stopped = false;
+      let stopDay = tradingDays;
+      let totalTrades = 0;
+      let winCount = 0;
+      let lossCount = 0;
+      const balanceHistory = [];
+      const dayTrades = [];
+
+      for (let day = 1; day <= tradingDays; day++) {
+        if (stopped) {
+          balanceHistory.push(balance);
+          dayTrades.push([]);
+          continue;
+        }
+        if (Math.random() > chanceTrade) {
+          balanceHistory.push(balance);
+          dayTrades.push([]);
+          continue;
+        }
+        const tradesThisDay = [];
+        for (let t = 0; t < maxTrades; t++) {
+          if (stopped) break;
+          const isWin = Math.random() < winRate;
+          const rr = rrMin + Math.random() * (rrMax - rrMin);
+          const profitOrLoss = isWin ? risk * rr : -risk;
+          balance += profitOrLoss;
+          tradesThisDay.push((isWin ? "+" : "-") + Math.abs(profitOrLoss).toFixed(0));
+          if (isWin) winCount++; else lossCount++;
+          totalTrades++;
+          if (balance >= monthlyGoal) {
+            stopped = true;
+            stopDay = day;
+          } else if (balance <= failThreshold) {
+            stopped = true;
+            stopDay = day;
+          }
+        }
+        balanceHistory.push(balance);
+        dayTrades.push(tradesThisDay);
+      }
+
+      return {
+        balanceHistory,
+        dayTrades,
+        finalBalance: balance,
+        stopDay,
+        totalTrades,
+        winCount,
+        lossCount
+      };
+    }
+
+    function animateSimulation(data, delay, params, disableAnim, callback) {
+      const { balanceHistory, dayTrades, finalBalance, stopDay, totalTrades, winCount, lossCount } = data;
+      const tradingDays = balanceHistory.length;
+      if (chartInstance) chartInstance.destroy();
+      const ctx = document.getElementById('balanceChart').getContext('2d');
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Day 0'],
+          datasets: [{
+            label: 'Balance',
+            data: [0],
+            borderColor: '#00bcd4',
+            backgroundColor: 'rgba(0, 188, 212, 0.2)',
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          animation: disableAnim ? false : { duration: 300 },
+          plugins: {
+            legend: {
+              labels: { color: '#e0e0e0' }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Trading Day', color: '#e0e0e0' },
+              ticks: { color: '#e0e0e0' },
+              grid: { color: '#333' }
+            },
+            y: {
+              title: { display: true, text: 'Balance ($)', color: '#e0e0e0' },
+              ticks: { color: '#e0e0e0' },
+              grid: { color: '#333' }
+            }
+          }
+        }
+      });
+
+      const journalContainer = document.getElementById('journal');
+      journalContainer.innerHTML = '';
+      for (let i = 0; i < tradingDays; i++) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'journal-day';
+        journalContainer.appendChild(dayDiv);
+      }
+
+      function displaySummary() {
+        const statusColor = finalBalance >= params.monthlyGoal ? '#4caf50'
+                            : finalBalance <= params.failThreshold ? '#f44336'
+                            : '#ffeb3b';
+        const status = finalBalance >= params.monthlyGoal
+                       ? 'You reached the Goal!'
+                       : finalBalance <= params.failThreshold
+                       ? 'You Failed!'
+                       : 'You did not complete the Goal!';
+        const winPct = totalTrades > 0 ? ((winCount / totalTrades) * 100).toFixed(1) : '0.0';
+        const pnlText = finalBalance >= 0 ? '$' + finalBalance.toFixed(0) + ' profit'
+                                           : '$' + Math.abs(finalBalance).toFixed(0) + ' loss';
+        const daysText = stopDay;
+        const summaryDiv = document.getElementById('summary');
+        summaryDiv.innerHTML = `
+          <h1 style="color: ${statusColor};">${status}</h1>
+          <h2>${pnlText} in ${daysText} days, Total of ${totalTrades} trades, ${winCount} wins, ${lossCount} losses (${winPct}%)</h2>
+        `;
+        if (callback) callback();
+      }
+
+      if (delay === 0) {
+        for (let i = 0; i < tradingDays; i++) {
+          updateDay(i + 1);
+        }
+        displaySummary();
+      } else {
+        let i = 0;
+        const step = () => {
+          if (i < tradingDays) {
+            updateDay(i + 1);
+            i++;
+            if (i === tradingDays) {
+              displaySummary();
+            } else {
+              setTimeout(step, delay);
+            }
+          }
+        };
+        step();
+      }
+
+      function updateDay(dayIndex) {
+        const trades = dayTrades[dayIndex - 1];
+        const pnl = trades.reduce((sum, val) => sum + parseFloat(val), 0);
+        chartInstance.data.labels.push('Day ' + dayIndex);
+        chartInstance.data.datasets[0].data.push(balanceHistory[dayIndex - 1]);
+        chartInstance.update();
+
+        const dayDiv = journalContainer.children[dayIndex - 1];
+        if (pnl > 0) dayDiv.style.backgroundColor = '#2e7d32';
+        else if (pnl < 0) dayDiv.style.backgroundColor = '#c62828';
+        else dayDiv.style.backgroundColor = '#424242';
+
+        const dayHeader = document.createElement('h3');
+        dayHeader.textContent = 'Day ' + dayIndex;
+        dayDiv.appendChild(dayHeader);
+
+        if (trades.length > 0) {
+          const ul = document.createElement('ul');
+          trades.forEach(val => {
+            const li = document.createElement('li');
+            li.textContent = val;
+            if (val.startsWith('+')) li.style.color = '#81c784';
+            else li.style.color = '#e57373';
+            ul.appendChild(li);
+          });
+          dayDiv.appendChild(ul);
+        } else {
+          const noTrade = document.createElement('div');
+          noTrade.textContent = 'No trades';
+          noTrade.style.color = '#bbbbbb';
+          dayDiv.appendChild(noTrade);
+        }
+
+        const pnlDiv = document.createElement('div');
+        pnlDiv.className = 'pnl';
+        pnlDiv.textContent = 'PnL: $' + pnl.toFixed(0);
+        dayDiv.appendChild(pnlDiv);
+        dayDiv.style.opacity = 1;
+      }
+    }
+
+    document.getElementById('runSim').addEventListener('click', () => {
+      const runButton = document.getElementById('runSim');
+      const multiButton = document.getElementById('runMulti');
+      runButton.disabled = true;
+      multiButton.disabled = true;
+      document.getElementById('summary').innerHTML = '';
+      document.getElementById('multiSummary').innerHTML = '';
+      document.getElementById('journal').innerHTML = '';
+      if (chartInstance) chartInstance.destroy();
+
+      const monthlyGoal = parseFloat(document.getElementById('monthlyGoal').value);
+      const failThreshold = parseFloat(document.getElementById('fail').value);
+      const tradingDays = parseInt(document.getElementById('tradingDays').value, 10);
+      const maxTrades = parseInt(document.getElementById('maxTrades').value, 10);
+      const chanceTrade = parseFloat(document.getElementById('chanceTrade').value) / 100;
+      const risk = parseFloat(document.getElementById('risk').value);
+      const rrMin = parseFloat(document.getElementById('rrMin').value);
+      const rrMax = parseFloat(document.getElementById('rrMax').value);
+      const winRate = parseFloat(document.getElementById('winRate').value) / 100;
+      const speedVal = parseInt(speedRange.value, 10);
+      const delay = speedVal >= parseInt(speedRange.max, 10) ? 0 : Math.round(1000 / speedVal);
+
+      window.params = { monthlyGoal, failThreshold, tradingDays, maxTrades, chanceTrade, risk, rrMin, rrMax, winRate };
+
+      const data = prepareSimulationData(window.params);
+      animateSimulation(data, delay, window.params, false, () => {
+        runButton.disabled = false;
+        multiButton.disabled = false;
+      });
+    });
+
+    document.getElementById('runMulti').addEventListener('click', () => {
+      const runButton = document.getElementById('runSim');
+      const multiButton = document.getElementById('runMulti');
+      runButton.disabled = true;
+      multiButton.disabled = true;
+      document.getElementById('summary').innerHTML = '';
+      document.getElementById('multiSummary').innerHTML = '';
+      if (chartInstance) chartInstance.destroy();
+
+      const monthlyGoal = parseFloat(document.getElementById('monthlyGoal').value);
+      const failThreshold = parseFloat(document.getElementById('fail').value);
+      const tradingDays = parseInt(document.getElementById('tradingDays').value, 10);
+      const maxTrades = parseInt(document.getElementById('maxTrades').value, 10);
+      const chanceTrade = parseFloat(document.getElementById('chanceTrade').value) / 100;
+      const risk = parseFloat(document.getElementById('risk').value);
+      const rrMin = parseFloat(document.getElementById('rrMin').value);
+      const rrMax = parseFloat(document.getElementById('rrMax').value);
+      const winRate = parseFloat(document.getElementById('winRate').value) / 100;
+      const numRuns = parseInt(document.getElementById('numRuns').value, 10);
+      const multiSpeedVal = parseInt(multiSpeedRange.value, 10);
+      const simDelay = multiSpeedVal >= parseInt(multiSpeedRange.max, 10) ? 0 : Math.round(1000 / multiSpeedVal);
+
+      const paramsMulti = { monthlyGoal, failThreshold, tradingDays, maxTrades, chanceTrade, risk, rrMin, rrMax, winRate };
+
+      let passedCount = 0;
+      let failedCount = 0;
+      let incompleteCount = 0;
+      let sumFinalBalance = 0;
+      let sumDays = 0;
+      let sumTrades = 0;
+      let sumWins = 0;
+      let sumLosses = 0;
+      let lastData;
+
+      if (simDelay === 0) {
+        // Instant: run all simulations without rendering intermediate, then render last
+        for (let i = 0; i < numRuns; i++) {
+          const data = prepareSimulationData(paramsMulti);
+          lastData = data;
+          sumFinalBalance += data.finalBalance;
+          sumDays += data.stopDay;
+          sumTrades += data.totalTrades;
+          sumWins += data.winCount;
+          sumLosses += data.lossCount;
+          if (data.finalBalance >= monthlyGoal) passedCount++;
+          else if (data.finalBalance <= failThreshold) failedCount++;
+          else incompleteCount++;
+        }
+        animateSimulation(lastData, 0, paramsMulti, true, () => {
+          const avgBalance = (sumFinalBalance / numRuns).toFixed(2);
+          const avgDays = (sumDays / numRuns).toFixed(2);
+          const avgTrades = (sumTrades / numRuns).toFixed(2);
+          const avgWinPct = sumTrades > 0 ? ((sumWins / sumTrades) * 100).toFixed(1) : '0.0';
+          const successRate = ((passedCount / numRuns) * 100).toFixed(2);
+          const multiDiv = document.getElementById('multiSummary');
+          multiDiv.innerHTML = `
+            <h1>Multi Simulation Results (${numRuns} runs)</h1>
+            <h2>Success rate: ${successRate}% (Passed: ${passedCount}, Failed: ${failedCount}, Incomplete: ${incompleteCount})</h2>
+            <h2>Avg Final Balance: $${avgBalance}, Avg Days: ${avgDays}, Avg Trades: ${avgTrades}, Avg Win %: ${avgWinPct}%</h2>
+          `;
+          runButton.disabled = false;
+          multiButton.disabled = false;
+        });
+      } else {
+        // Timed: render each simulation
+        let runIndex = 0;
+        function runNextSimulation() {
+          if (runIndex >= numRuns) {
+            animateSimulation(lastData, 0, paramsMulti, true, () => {
+              const avgBalance = (sumFinalBalance / numRuns).toFixed(2);
+              const avgDays = (sumDays / numRuns).toFixed(2);
+              const avgTrades = (sumTrades / numRuns).toFixed(2);
+              const avgWinPct = sumTrades > 0 ? ((sumWins / sumTrades) * 100).toFixed(1) : '0.0';
+              const successRate = ((passedCount / numRuns) * 100).toFixed(2);
+              const multiDiv = document.getElementById('multiSummary');
+              multiDiv.innerHTML = `
+                <h1>Multi Simulation Results (${numRuns} runs)</h1>
+                <h2>Success rate: ${successRate}% (Passed: ${passedCount}, Failed: ${failedCount}, Incomplete: ${incompleteCount})</h2>
+                <h2>Avg Final Balance: $${avgBalance}, Avg Days: ${avgDays}, Avg Trades: ${avgTrades}, Avg Win %: ${avgWinPct}%</h2>
+              `;
+              runButton.disabled = false;
+              multiButton.disabled = false;
+            });
+            return;
+          }
+          const data = prepareSimulationData(paramsMulti);
+          lastData = data;
+          sumFinalBalance += data.finalBalance;
+          sumDays += data.stopDay;
+          sumTrades += data.totalTrades;
+          sumWins += data.winCount;
+          sumLosses += data.lossCount;
+          if (data.finalBalance >= monthlyGoal) passedCount++;
+          else if (data.finalBalance <= failThreshold) failedCount++;
+          else incompleteCount++;
+
+          animateSimulation(data, 0, paramsMulti, true, () => {
+            runIndex++;
+            setTimeout(runNextSimulation, simDelay);
+          });
+        }
+        runNextSimulation();
+      }
+    });
+  </script>
+</body>
+</html>
