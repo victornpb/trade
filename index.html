@@ -198,42 +198,49 @@
 		<input type="number" id="winRate" value="60" step="0.1" /> %
 	</div>
 	<hr>
-	<div class="input-group">
-		<h3>Simulation</h3>
-		<label for="speedRange">Single Simulation Speed:</label>
-		<input type="range" id="speedRange" min="1" max="61" step="1" value="10" />
-		<span id="speedLabel"></span>
-	</div>
-	<button id="runSim">Run Simulation</button>
-	<div id="summary"></div>
-	<div id="simResult">
-		<div id="journal"></div>
-		<div class="canvas-container">
-			<canvas id="balanceChart"></canvas>
+	<h2>Simulation</h2>
+	<div style="display: flex; flex-wrap: wrap; gap: 20px;">
+		<div>
+			<h3>Single pass</h3>
+			<div class="input-group">
+				<label for="speedRange">Single Simulation Speed:</label>
+				<input type="range" id="speedRange" min="1" max="61" step="1" value="10" />
+				<span id="speedLabel"></span>
+			</div>
+			<button id="runSim">Run Simulation</button>
+		</div>
+		<div>
+			<h3>Multi pass simulation</h3>
+			<div class="input-group">
+				<label for="numRuns">Number of Simulations:</label>
+				<input type="number" id="numRuns" value="100" />
+			</div>
+			<div class="input-group">
+				<label for="multiSpeedRange">Multi Simulation Speed:</label>
+				<input type="range" id="multiSpeedRange" min="1" max="121" step="1" value="25" />
+				<span id="multiSpeedLabel"></span>
+			</div>
+			<button id="runMulti">Run Multi Simulation</button>
 		</div>
 	</div>
-
 	<hr>
-	<div class="input-group">
-		<h3>Multi pass simulation</h3>
-		<label for="numRuns">Number of Simulations:</label>
-		<input type="number" id="numRuns" value="100" />
+	<div>
+		<div id="multiSummary"></div>
+		<div id="summary"></div>
+		<div id="simResult">
+			<div id="journal"></div>
+			<div class="canvas-container">
+				<canvas id="balanceChart"></canvas>
+			</div>
+		</div>
 	</div>
-	<div class="input-group">
-		<label for="multiSpeedRange">Multi Simulation Speed:</label>
-		<input type="range" id="multiSpeedRange" min="1" max="121" step="1" value="25" />
-		<span id="multiSpeedLabel"></span>
-	</div>
-	<button id="runMulti">Run Multi Simulation</button>
-	<div id="multiSummary"></div>
-
 	<hr>
 	<div class="input-group">
 		<h3>Success optimizer</h3>
 		<p>
-			Run the simulation multiple times, plotting the success rate for multiple values of a single variable. All
-			other variables are kept unchanged, so you can see how each variable affects your overall probability and so
-			you can find the sweet spot of one parameter e.g.: Risk($).
+			Run the simulation multiple times, plotting the success rate for multiple values of a single variable.
+			All other variables are kept unchanged, so you can see how each variable affects your overall probability
+			and so you can find the sweet spot of one parameter e.g.: Risk($).
 		</p>
 		<label for="sweepVar">Sweep Variable:</label>
 		<select id="sweepVar">
