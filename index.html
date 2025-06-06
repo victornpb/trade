@@ -689,16 +689,32 @@
 
 				const multiDiv = document.getElementById('multiSummary');
 				multiDiv.innerHTML = `
-					<h1>Multi Simulation Results (${total} runs)</h1>
-					<p>We ran this trading challenge <strong>${total}</strong> times using your current settings.</p>
-					<p>Of those <strong>${total}</strong> attempts, <strong>${passedCount}</strong> (${passPct}%) <span style="color:#4caf50;">passed</span> (hit the profit goal), <strong>${failedCount}</strong> (${failPct}%) <span style="color:#f44336;">failed</span> (hit the loss threshold), and <strong>${incompleteCount}</strong> (${incPct}%) neither hit the goal nor the threshold by day ${tradingDays}.</p>
-					<p>On average over all runs:</p>
-					<ul>
-						<li>Final balance was <strong>$${avgBalance}</strong>.</li>
-						<li>Trading stopped after <strong>${avgDays}</strong> days (either by hitting a threshold or completing all days).</li>
-						<li>You executed about <strong>${avgTrades}</strong> trades per run.</li>
-						<li>Your trade win rate across all simulated trades was <strong>${avgWinPct}%</strong>.</li>
+				<h1>Multi Simulation Results (${total} runs)</h1>
+				<p>We ran this simulation <strong>${total}</strong> times using your current settings.</p>
+				<p>
+					Out of <strong>${total}</strong> challenges:
+					<ul style="list-style: none; padding-left: 0;">
+					<li>
+						<span style="color: #4caf50;"><strong>Passed</strong></span>: ${passPct}%
+						 or <strong>${passedCount}</strong> accounts reached profit goal
+					</li>
+					<li>
+						<span style="color: #f44336;"><strong>Failed</strong></span>: ${failPct}%
+						 or <strong>${failedCount}</strong> accounts reached maximum loss
+					</li>
+					<li>
+						<strong style="color: #ffeb3b;"><strong>Incomplete</strong></strong>: ${incPct}%
+						 or <strong>${incompleteCount}</strong> accounts neither passed or failed by the end of day ${tradingDays}
+					</li>
 					</ul>
+				</p>
+				<p>On average, across all runs:</p>
+				<ul>
+					<li><strong>Final balance</strong>: $${avgBalance}</li>
+					<li><strong>Days traded</strong>: ${avgDays} days (either by hitting a threshold or completing all days)</li>
+					<li><strong>Trades per run</strong>: about ${avgTrades}</li>
+					<li><strong>Win rate</strong>: ${avgWinPct}% across all simulated trades</li>
+				</ul>
 				`;
 
 				runButton.disabled = false;
