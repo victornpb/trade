@@ -204,10 +204,10 @@
 	</div>
 	<hr>
 
-	<h2>Simulation</h2>
+	<h3>Simulation</h3>
 	<div style="display: flex; flex-wrap: wrap; gap: 20px;">
 		<div>
-			<h3>Single pass</h3>
+			<h4>Single pass</h4>
 			<div class="input-group">
 				<label for="speedRange">How fast should it run?</label>
 				<input type="range" id="speedRange" min="1" max="61" step="1" value="10" />
@@ -216,7 +216,7 @@
 			<button id="runSim">Run Single Simulation</button>
 		</div>
 		<div>
-			<h3>Multi pass</h3>
+			<h4>Multi pass</h4>
 			<div class="input-group">
 				<label for="numRuns">How many times?</label>
 				<input type="number" id="numRuns" value="100" />
@@ -232,12 +232,6 @@
 	<hr>
 
 	<div>
-		<!-- multi sim results -->
-		<div id="multiSummary"></div>
-		<div class="canvas-container">
-			<canvas id="scatterChart" style="display: none;"></canvas>
-		</div>
-		
 		<!-- single simulation results -->
 		<div id="summary"></div>
 		<div id="simResult">
@@ -245,6 +239,11 @@
 			<div class="canvas-container">
 				<canvas id="balanceChart"></canvas>
 			</div>
+		</div>
+		<!-- multi sim results -->
+		<div id="multiSummary"></div>
+		<div class="canvas-container">
+			<canvas id="scatterChart" style="display: none;"></canvas>
 		</div>
 	</div>
 	<hr>
@@ -435,10 +434,10 @@
 					: finalBalance <= params.failThreshold ? '#f44336'
 						: '#ffeb3b';
 				const status = finalBalance >= params.monthlyGoal
-					? 'Congratulations! You reached your profit goal!'
+					? 'Passed! You hit the goal!'
 					: finalBalance <= params.failThreshold
-						? 'Oops! You hit your fail threshold!'
-						: 'You didn’t reach your goal or hit your fail threshold by the end.';
+						? 'Failed! You hit the loss threshold!'
+						: 'Incomplete! You neither hit the goal nor the threshold.';
 				const winPct = totalTrades > 0 ? ((winCount / totalTrades) * 100).toFixed(1) : '0.0';
 				const pnlText = finalBalance >= 0 ? '$' + finalBalance.toFixed(0) + ' profit'
 					: '$' + Math.abs(finalBalance).toFixed(0) + ' loss';
