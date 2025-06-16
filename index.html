@@ -873,7 +873,8 @@
 			const sweepSumDiv = document.getElementById('sweepSummary');
 			sweepSumDiv.innerHTML = `
 				<h1>Optimizer Summary</h1>
-				<p>We tested <strong>${xValues.length}</strong> different values of <strong>${sweepVar}</strong> from <strong>${minVal}</strong> to <strong>${maxVal}</strong> (step ${stepVal}). For each value, we ran <strong>${runsPerVal}</strong> simulations—so a total of <strong>${xValues.length * runsPerVal}</strong> simulated runs.</p>
+    				<p>We ran a total of <strong>${xValues.length * runsPerVal}</strong> simulations across <strong>${xValues.length}</strong> tests (<strong>${runsPerVal}</strong> simulations for each test).</p>
+				<p>We tested <strong>${xValues.length}</strong> different <strong>${sweepVar}</strong>, from <strong>${minVal}</strong> to <strong>${maxVal}</strong> (step ${stepVal}).</p>
 				<p>The best success rate was <strong>${maxRate.toFixed(2)}%</strong> when <strong>${sweepVar} = ${bestX}</strong>.</p>
 				<p>The worst performance was <strong>${minRate.toFixed(2)}%</strong> when <strong>${sweepVar} = ${worstX}</strong>.</p>
 				<p>On average across all tested values, the success rate was <strong>${avgSuccess}%</strong>.</p>
